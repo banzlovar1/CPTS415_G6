@@ -15,15 +15,6 @@ testNodesT = pd.read_csv('.\\PythonData\\NewTestNodes.csv')
 testNodesM = pd.read_csv('.\\PythonData\\testNodes1Mil.csv')
 testNodesL = pd.read_csv('.\\PythonData\\testNodes5Mil.csv')
 
-
-# g = nx.MultiGraph()
-# # Generate graph of nodes using networkX
-# for index, row in df.iterrows():
-#     if row[3] != row[5]:
-#         g.add_edge(row[3], row[5], weight=row[10])
-# print(g.number_of_nodes())
-# print(g.number_of_edges())
-
 def getAllAirportsInCountry(airports, ct):
     return airports.loc[airports['Country'] == ct]
 
