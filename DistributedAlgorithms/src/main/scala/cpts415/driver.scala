@@ -72,7 +72,70 @@ object driver {
         |""".stripMargin)
     println((System.nanoTime - t1)/1e9d)
     countryInfo.show()
+    
+    /**
+     * Top 5 Countries
+     */
+    println("Top Countries by Airport")
+    val t4 = System.nanoTime
+    var freq = spark.sql(
+      """
+        |SELECT Country, COUNT(*)
+        |FROM airports
+        |GROUP BY airports.Country
+        |ORDER BY 2 DESC
+        |LIMIT 5
+        |""".stripMargin
+    )
+    println((System.nanoTime - t4)/1e9d)
+    freq.show()
+    
+    //Create a Vertex DataFrame with unique ID column "id"
+    print("Load Time to generate Airport Graph: ")
+    val t7 = System.nanoTime
+    val v = routeAirports
+    // Create an Edge DataFrame with "src" and "dst" columns
+    val e = routeEdges
+    // Create a GraphFrame
+    val g = GraphFrame(v, e)
+    print(((System.nanoTime - t7)/1e9d)+"\n")
+    
+    /**
+     * BFS Shortest Path, Seattle to Denver, should be a direct flight
+     */
+    print("Airport BFS: ")
+    val t10 = System.nanoTime
+    val results = g.bfs.fromExpr("id='SEA'").toExpr("id='DEN'").run()
+    print(((System.nanoTime - t10)/1e9d)+"\n")
+    results.show()
+    
+    /**
+    * Airports within K hops
+    */
+    print("Airport K Hops: ")
+    val t13 = System.nanoTime
+    var airlinePat = createPattern(4)
+    var airlineFill = createAirportsFilter(4, "'SEA'", "'DEN'")
+    val paths = g.find(airlinePat).filter(airlineFill)
+    print(((System.nanoTime - t13)/1e9d)+"\n")
+    paths.show()
+    
+     /**
+     * K Nearest Neighbor, 1 hop
+     */
+    /**
+     * Sample of what the filter is supposed to do.
+     * Pattern Matching given n hops
+     */
+    //    val pattern = "(x1) - [a] -> (x2); (x2) - [b] -> (x3)"
+    print("airport reachability k hops: ")
+    val t16 = System.nanoTime
+    val airportReach = g.bfs.fromExpr("id='SEA'").toExpr("id<>'SEA'").maxPathLength(2).run()
+    print(((System.nanoTime - t16)/1e9d)+"\n")
 
+    /**
+    // Testing Scale
+    // Finding all rows with country == to given value
     println("Mid size search test")
     val t2 = System.nanoTime
     var testNodeMidInfo = spark.sql(
@@ -106,24 +169,7 @@ object driver {
     println((System.nanoTime - t30)/1e9d)
     testNodeHugeInfo.show()
 
-
-    /**
-     * Top 5 Countries
-     */
-    println("Top Countries by Airport")
-    val t4 = System.nanoTime
-    var freq = spark.sql(
-      """
-        |SELECT Country, COUNT(*)
-        |FROM airports
-        |GROUP BY airports.Country
-        |ORDER BY 2 DESC
-        |LIMIT 5
-        |""".stripMargin
-    )
-    println((System.nanoTime - t4)/1e9d)
-    //freq.show()
-
+    // Test finding top k countries
     println("Mid Size Top K Countries")
     val t5 = System.nanoTime
     var midfreq = spark.sql(
@@ -163,34 +209,10 @@ object driver {
     )
     println((System.nanoTime - t60)/1e9d)
 
-
-//
-//    println("Active Airlines in US")
-//    var CountryAirlines = spark.sql(
-//      """
-//        |SELECT Name
-//        |FROM airlines
-//        |WHERE airlines.Country = 'United States' AND airlines.Active = 'Y'
-//        |""".stripMargin
-//    )
-//    CountryAirlines.show()
-
-
     /**
      * The GraphFrame function.
      */
-
-    //Create a Vertex DataFrame with unique ID column "id"
-    print("Load Time to generate Airport Graph: ")
-    val t7 = System.nanoTime
-    val v = routeAirports
-    // Create an Edge DataFrame with "src" and "dst" columns
-    val e = routeEdges
-    // Create a GraphFrame
-    val g = GraphFrame(v, e)
-    print(((System.nanoTime - t7)/1e9d)+"\n")
-
-
+    // Creating Test graphs 
     //100000 Node graph with 1 million edges
     print("Load Time to generate Mid Size Graph: ")
     val t8 = System.nanoTime
@@ -225,19 +247,10 @@ object driver {
     val gHugeTest = GraphFrame(vHugeTest, eHugeTest)
     print(((System.nanoTime - t20)/1e9d)+"\n")
 
-
-    //    var largePat = createPattern(4)
-//    var largeFill = createTestFilter(5, "'1'", "'5'")
-
     /**
      * BFS Shortest Path, Seattle to Denver, should be a direct flight
      */
-      print("Airport BFS: ")
-    val t10 = System.nanoTime
-    val results = g.bfs.fromExpr("id='SEA'").toExpr("id='DEN'").run()
-    print(((System.nanoTime - t10)/1e9d)+"\n")
-    //results.show()
-
+    // BFS on test datasets
     print("Mid size BFS: ")
     val t11 = System.nanoTime
     val midBfs = gMidTest.bfs.fromExpr("id= 1").toExpr("id=5").run()
@@ -257,23 +270,11 @@ object driver {
     /**
      * All neighbors of a node (only one hop)
      */
-//    val result = g.bfs.fromExpr("id='SEA'").toExpr("id<>'SEA'").maxPathLength(2).run()
-//    result.show(false)
-
     /**
      * Sample of what the filter is supposed to do.
      * Pattern Matching given n hops
      */
     //    val pattern = "(x1) - [a] -> (x2); (x2) - [b] -> (x3)"
-    //
-    print("Airport K Hops: ")
-    val t13 = System.nanoTime
-    var airlinePat = createPattern(4)
-    var airlineFill = createAirportsFilter(4, "'SEA'", "'DEN'")
-    val paths = g.find(airlinePat).filter(airlineFill)
-    print(((System.nanoTime - t13)/1e9d)+"\n")
-    //paths.show()
-
    /**
      * Testing on larger graphs
      */
@@ -310,11 +311,6 @@ object driver {
     /**
      * K Nearest Neighbor, 1 hop
      */
-    print("airport reachability k hops: ")
-    val t16 = System.nanoTime
-    val airportReach = g.bfs.fromExpr("id='SEA'").toExpr("id<>'SEA'").maxPathLength(2).run()
-    print(((System.nanoTime - t16)/1e9d)+"\n")
-
     print("Mid reachability k hops: ")
     val t17 = System.nanoTime
     val midReach = gMidTest.bfs.fromExpr("id=1").toExpr("id<>1").maxPathLength(2).run()
@@ -329,7 +325,7 @@ object driver {
     val t80 = System.nanoTime
     val hugeeReach = gHugeTest.bfs.fromExpr("id=1").toExpr("id<>1").maxPathLength(2).run()
     print(((System.nanoTime - t80)/1e9d)+"\n")
-
+    */
 
     /**
      * Stop the Spark session
