@@ -71,7 +71,7 @@ object driver {
         |WHERE airports.Country = 'United States'
         |""".stripMargin)
     println((System.nanoTime - t1)/1e9d)
-    countryInfo.show()
+    countryInfo.show(false)
     
     /**
      * Top 5 Countries
@@ -88,7 +88,7 @@ object driver {
         |""".stripMargin
     )
     println((System.nanoTime - t4)/1e9d)
-    freq.show()
+    freq.show(false)
     
     //Create a Vertex DataFrame with unique ID column "id"
     print("Load Time to generate Airport Graph: ")
